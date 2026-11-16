@@ -54,7 +54,16 @@ jobs:
           report-file: .report.json
 
       - name: Print the job summary to the console log too
-        # Same reasoning as the Java workflow's identical step: $GITHUB_STEP_SUMMARY has no
-        # REST/gh CLI-visible equivalent, only an Actions-UI rendering.
+        # Same reasoning as the Java workflow's identical step: $GITHUB_STEP_SUMMARY is
+        # reassigned fresh per step (confirmed empirically: an earlier run's job completed
+        # outcome=success but this cat produced zero output), so it is not relied on as
+        # evidence; see the next step instead.
         if: always()
         run: cat "$GITHUB_STEP_SUMMARY"
+
+      - name: Re-run the same installed binary against the same report, for log-visible evidence
+        # Not a simulation -- the exact release binary axiom-action just downloaded and
+        # checksum-verified, invoked with the exact same .report.json, printed directly to this
+        # step's own console log. Same reasoning as the Java workflow's identical step.
+        if: always()
+        run: /home/runner/.axiom/v1.15.0/axiom/bin/axiom investigate --report .report.json

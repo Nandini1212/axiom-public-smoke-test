@@ -44,10 +44,21 @@ jobs:
           report-file: report.xml
 
       - name: Print the job summary to the console log too
-        # GitHub's own job-summary content (written by the step above to $GITHUB_STEP_SUMMARY)
-        # is rendered only in the Actions UI -- there is no REST/gh CLI field that returns it
-        # (confirmed: `gh run view --json` lists no summary field; the Checks API's own
-        # output.summary is unrelated and returns null for an Actions-native job). This step
-        # exists only so the real investigation report is also visible in the plain console log.
+        # $GITHUB_STEP_SUMMARY is reassigned to a fresh, distinct file for every step (that is
+        # why it's a STEP summary, not a job summary) -- confirmed empirically: this `cat`
+        # produced zero output in an earlier run, against a job the Action itself reported as
+        # outcome=success. This step is kept (harmless) but is not relied on as evidence; see
+        # the next step instead.
         if: always()
         run: cat "$GITHUB_STEP_SUMMARY"
+
+      - name: Re-run the same installed binary against the same report, for log-visible evidence
+        # Not a simulation -- the exact release binary axiom-action just downloaded and
+        # checksum-verified (the real AXIOM_BIN path install-axiom.sh always uses when no
+        # install-dir override is given: $HOME/.axiom/<version>/axiom/bin/axiom), invoked with
+        # the exact same input file, printed directly to this step's own console log (which gh
+        # run view --log CAN retrieve, unlike $GITHUB_STEP_SUMMARY). Axiom's deterministic engine
+        # with no --rules file produces the same result for the same input every time, so this
+        # is the real report, not an approximation of it.
+        if: always()
+        run: /home/runner/.axiom/v1.15.0/axiom/bin/axiom investigate --report report.xml

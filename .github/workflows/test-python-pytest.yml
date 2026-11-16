@@ -1,0 +1,54 @@
+name: Axiom public Action smoke test (Python/pytest)
+
+# Verifies that the published Nandini1212/axiom-action@v1.15.0 works with no access of any kind
+# to the private Nandini1212/axiom repository -- no github-token input, no PAT, no secret of any
+# kind is configured below. Manual trigger only; this is a one-off verification, not CI for this
+# repository's own (nonexistent) code.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke-test-python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install pytest and pytest-json-report
+        run: pip install pytest pytest-json-report
+
+      - name: Write one intentionally failing pytest test
+        # A YAML block scalar (the `|` above) strips exactly the first content line's own
+        # indentation from every line in the block uniformly -- so `assert` below must carry 4
+        # MORE literal spaces than `def` right above it, not 4 spaces in absolute terms, for the
+        # generated file to actually have correct Python indentation after that uniform strip.
+        # Verified directly: an earlier version of this step wrote `assert` at the exact same
+        # column as `def`, which produced a real `SyntaxError: expected an indented block`.
+        run: |
+          cat > test_axiom_smoke.py <<'EOF'
+          def test_adds_two_numbers_correctly():
+              assert 2 + 2 == 5
+          EOF
+          python3 -c "import ast; ast.parse(open('test_axiom_smoke.py').read())"
+          cat test_axiom_smoke.py
+
+      - name: Run pytest and generate .report.json
+        # Deliberately NOT continue-on-error -- the real test failure below must be preserved as
+        # a real, visible job failure; only the later `if: always()` step is what lets the Axiom
+        # step still run afterward, not a softened/hidden exit code here.
+        run: pytest --json-report --json-report-file=.report.json
+
+      - name: Investigate with the published Axiom Action
+        if: always()
+        uses: Nandini1212/axiom-action@v1.15.0
+        with:
+          axiom-version: 'v1.15.0'
+          report-file: .report.json

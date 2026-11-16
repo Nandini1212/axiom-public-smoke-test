@@ -1,0 +1,44 @@
+name: Axiom public Action smoke test (Java/JUnit)
+
+# Verifies that the published Nandini1212/axiom-action@v1.15.0 works with no access of any kind
+# to the private Nandini1212/axiom repository -- no github-token input, no PAT, no secret of any
+# kind is configured below. Manual trigger only; this is a one-off verification, not CI for this
+# repository's own (nonexistent) code.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke-test-java:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Generate a JUnit XML report with one intentionally failing test
+        # A direct, schema-valid JUnit-style XML document -- Axiom detects report format from
+        # the document's own real content, never from a filename or a real Maven/Gradle build
+        # having produced it. No build tool needed to exercise Axiom's own report-parsing and
+        # investigation behavior, which is what this smoke test is actually checking.
+        run: |
+          cat > report.xml <<'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <testsuite name="com.example.smoketest.AxiomSmokeTest" tests="1" failures="1" errors="0" skipped="0"><testcase name="shouldAddTwoNumbersCorrectly" classname="com.example.smoketest.AxiomSmokeTest" time="0.004"><failure message="expected:&lt;4&gt; but was:&lt;5&gt;" type="java.lang.AssertionError">java.lang.AssertionError: expected:&lt;4&gt; but was:&lt;5&gt;
+          	at com.example.smoketest.AxiomSmokeTest.shouldAddTwoNumbersCorrectly(AxiomSmokeTest.java:12)</failure></testcase></testsuite>
+          EOF
+          cat report.xml
+
+      - name: Investigate with the published Axiom Action
+        if: always()
+        uses: Nandini1212/axiom-action@v1.15.0
+        with:
+          axiom-version: 'v1.15.0'
+          report-file: report.xml

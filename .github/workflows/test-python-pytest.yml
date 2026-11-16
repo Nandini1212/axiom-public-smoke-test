@@ -52,3 +52,9 @@ jobs:
         with:
           axiom-version: 'v1.15.0'
           report-file: .report.json
+
+      - name: Print the job summary to the console log too
+        # Same reasoning as the Java workflow's identical step: $GITHUB_STEP_SUMMARY has no
+        # REST/gh CLI-visible equivalent, only an Actions-UI rendering.
+        if: always()
+        run: cat "$GITHUB_STEP_SUMMARY"

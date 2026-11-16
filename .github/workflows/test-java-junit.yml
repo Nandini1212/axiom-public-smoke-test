@@ -42,3 +42,12 @@ jobs:
         with:
           axiom-version: 'v1.15.0'
           report-file: report.xml
+
+      - name: Print the job summary to the console log too
+        # GitHub's own job-summary content (written by the step above to $GITHUB_STEP_SUMMARY)
+        # is rendered only in the Actions UI -- there is no REST/gh CLI field that returns it
+        # (confirmed: `gh run view --json` lists no summary field; the Checks API's own
+        # output.summary is unrelated and returns null for an Actions-native job). This step
+        # exists only so the real investigation report is also visible in the plain console log.
+        if: always()
+        run: cat "$GITHUB_STEP_SUMMARY"
